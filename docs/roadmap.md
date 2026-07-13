@@ -58,7 +58,7 @@ This produces better results, uses less VRAM, and allows upgrading each componen
 ```
 Frontend:  Next.js 15 · React · TypeScript · TailwindCSS · Shadcn UI · Framer Motion
 Backend:   Next.js Route Handlers · WebSocket
-AI:        Gemma-4-e4b (Ollama) · Faster-Whisper · Kokoro/Piper TTS
+AI:        Gemma-4-e4b (LM Studio) · Faster-Whisper · Kokoro/Piper TTS
 Database:  SQLite · better-sqlite3
 State:     Zustand · Zod
 Audio:     MediaRecorder API · Web Audio API

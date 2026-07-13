@@ -250,7 +250,7 @@ Allow switching between different LLM models:
 ### Implementation
 
 - Settings page: model selector dropdown
-- Ollama already supports multiple models
+- LM Studio already supports multiple models — load/unload via the GUI or `lms` CLI
 - Just change the `model` parameter in the chat completion request
 - Test prompt compatibility across models (JSON output format)
 
@@ -281,7 +281,7 @@ Allow switching between different LLM models:
 Package ET as a standalone desktop app using Tauri:
 
 - Single binary that includes the Next.js app + SQLite
-- Bundle Ollama and models within the app
+- Bundle LM Studio and models within the app
 - True offline-first — no server needed
 - Available on macOS, Windows, Linux
 

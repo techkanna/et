@@ -43,8 +43,8 @@ Since your MacBook has no discrete GPU, AI models run on CPU during development.
 
 | Component | Dev Approach |
 |-----------|-------------|
-| LLM (Gemma) | Use [Ollama](https://ollama.com) — runs Gemma models on Apple Silicon CPU/Metal. Exposes OpenAI-compatible API at `http://localhost:11434/v1` |
-| STT (Whisper) | Use Ollama's whisper support, or a lightweight `whisper.cpp` binary for macOS |
+| LLM (Gemma) | Use [LM Studio](https://lmstudio.ai) — runs Gemma-4-e4b on Apple Silicon via Metal. Exposes OpenAI-compatible API at `http://127.0.0.1:1234/v1` (supports `/v1/chat/completions`, `/v1/models`, `/v1/embeddings`) |
+| STT (Whisper) | Use a lightweight `whisper.cpp` binary for macOS, or a Faster-Whisper server |
 | TTS | Use browser-native `SpeechSynthesis` API during dev. Real TTS on the server. |
 
 > [!TIP]
@@ -73,14 +73,14 @@ All AI models run as **services** behind OpenAI-compatible APIs. The Next.js app
 
 | Service | Model | Tool | Port | VRAM Usage |
 |---------|-------|------|------|------------|
-| **LLM** | Gemma-4-e4b (Q4_K_M) | Ollama or vLLM | `11434` | ~4–5 GB |
+| **LLM** | Gemma-4-e4b (Q4_K_M) | LM Studio (headless via `lms`) | `1234` | ~6.3 GB |
 | **STT** | Faster-Whisper (medium) | faster-whisper-server | `8100` | ~2 GB |
 | **TTS** | Kokoro or Piper | kokoro-fastapi or Piper HTTP | `8200` | ~1 GB (Kokoro) or CPU (Piper) |
 
 **Total VRAM**: ~7–8 GB, well within 12 GB.
 
 > [!IMPORTANT]
-> Models should NOT all be loaded simultaneously during initial development. Load LLM + STT for conversation, and TTS on-demand. Ollama manages model loading/unloading automatically.
+> Models should NOT all be loaded simultaneously during initial development. Load LLM + STT for conversation, and TTS on-demand. LM Studio supports configurable idle TTL and auto-eviction to free VRAM when models aren't in use.
 
 ### Sequential Model Loading Strategy
 
@@ -89,11 +89,32 @@ Since 12 GB VRAM is shared:
 ```
 Conversation Flow:
   1. STT loads → transcribes → unloads (or stays resident, ~2 GB)
-  2. LLM loads → generates response → stays resident (~4-5 GB)
+  2. LLM loads → generates response → stays resident (~6.3 GB)
   3. TTS loads → speaks → unloads (or stays resident, ~1 GB)
 ```
 
-With Ollama, idle models are automatically unloaded after a configurable timeout. This means you can run all three services without manual management.
+LM Studio's idle TTL and auto-eviction settings manage model loading/unloading automatically. Configure via the server settings or `lms` CLI on the LXC. This means you can run all three services without manual VRAM management.
+
+### LM Studio on the LXC (Headless)
+
+On the Linux LXC container, run LM Studio in headless mode using the `lms` CLI:
+
+```bash
+# Install LM Studio CLI
+npx lmstudio install-cli
+
+# Download the model
+lms get google/gemma-4-e4b --q4_k_m
+
+# Start the server in headless mode
+lms server start --port 1234
+
+# Load the model
+lms load google/gemma-4-e4b
+
+# Verify
+curl http://localhost:1234/v1/models
+```
 
 ---
 
@@ -105,7 +126,7 @@ With Ollama, idle models are automatically unloaded after a configurable timeout
 - Configure a systemd service for the Next.js production server
 - Set environment variables:
   ```env
-  ET_LLM_BASE_URL=http://localhost:11434/v1
+  ET_LLM_BASE_URL=http://localhost:1234/v1
   ET_STT_BASE_URL=http://localhost:8100
   ET_TTS_BASE_URL=http://localhost:8200
   ET_DATABASE_PATH=/opt/et/data/database.db
@@ -137,11 +158,11 @@ ssh user@proxmox-lxc "sudo systemctl restart et"
 
 ## 0.5 — Verification Checklist
 
-- [ ] MacBook: `pnpm dev` starts the Next.js app
-- [ ] MacBook: Ollama serves Gemma and responds to chat completions
-- [ ] MacBook: App can reach the LLM API and get a response
+- [x] MacBook: `pnpm dev` starts the Next.js app
+- [x] MacBook: LM Studio serves Gemma-4-e4b and responds to `/v1/chat/completions`
+- [x] MacBook: App can reach the LLM API at `http://127.0.0.1:1234/v1` and get a response
 - [ ] LXC: `nvidia-smi` shows the GPU
-- [ ] LXC: Ollama serves Gemma with GPU acceleration
+- [ ] LXC: LM Studio headless (`lms server start`) serves Gemma with GPU acceleration
 - [ ] LXC: Faster-Whisper server accepts audio and returns transcript
 - [ ] LXC: TTS server accepts text and returns audio
 - [ ] LXC: Next.js production build runs and serves the app
@@ -172,3 +193,25 @@ This phase produces:
 | AI model serving setup | 2–3 hours |
 | Deployment pipeline | 1 hour |
 | **Total** | **6–10 hours** |
+
+---
+
+## Progress Status
+
+### ✅ Completed
+- Verified Node v22 and pnpm v10 are installed.
+- Verified LM Studio is running on `127.0.0.1:1234` with the `google/gemma-4-e4b` model loaded.
+- Scaffolded Next.js 16 app with `pnpm`, TypeScript, Tailwind v4, ESLint, and App Router.
+- Installed core dependencies: `better-sqlite3`, `zod`, `zustand`, `framer-motion`, and `shadcn/ui`.
+- Configured native build bindings for `better-sqlite3`.
+- Initialized `shadcn/ui`.
+- Created the project directory structure (`features/`, `lib/`, `storage/`, etc.).
+- Created `.env.local` and `.env.example` configurations.
+- Updated `.gitignore` to exclude local storage and database files.
+- Built the project successfully (`pnpm build`).
+
+### ⏳ Pending (To be done manually later)
+- Proxmox LXC container setup & GPU passthrough.
+- Headless LM Studio (`lms`), Faster-Whisper, and TTS setup on LXC.
+- Systemd service configuration for Next.js on LXC.
+- Deployment pipeline to transfer builds from MacBook to LXC.

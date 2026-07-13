@@ -244,7 +244,7 @@ When an AI service is down:
 
 | Service | Fallback |
 |---------|----------|
-| LLM (Gemma) | Show error message: "ET is taking a break. Please check that Ollama is running." |
+| LLM (Gemma) | Show error message: "ET is taking a break. Please check that LM Studio is running." |
 | STT (Whisper) | Fall back to text input mode: "I can't hear you right now. Type your message instead." |
 | TTS | Fall back to text-only: show the reply as text without audio |
 
@@ -313,17 +313,36 @@ Since this runs on a local network (LXC → browser), it's primarily a desktop a
 
 Create systemd unit files for:
 
-1. **Ollama** (if not already a system service)
+1. **LM Studio** (headless via `lms server start`)
 2. **Faster-Whisper server**
 3. **TTS server (Kokoro/Piper)**
 4. **ET (Next.js)**
+
+Example for LM Studio:
+
+```ini
+[Unit]
+Description=LM Studio Server
+After=network.target
+
+[Service]
+Type=simple
+User=et
+ExecStart=/home/et/.lmstudio/bin/lms server start --port 1234
+Restart=always
+RestartSec=5
+Environment=HOME=/home/et
+
+[Install]
+WantedBy=multi-user.target
+```
 
 Example for ET:
 
 ```ini
 [Unit]
 Description=ET English Teacher
-After=network.target ollama.service
+After=network.target lmstudio.service
 
 [Service]
 Type=simple
@@ -334,7 +353,7 @@ Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
 Environment=PORT=3000
-Environment=ET_LLM_BASE_URL=http://localhost:11434/v1
+Environment=ET_LLM_BASE_URL=http://localhost:1234/v1
 Environment=ET_STT_BASE_URL=http://localhost:8100
 Environment=ET_TTS_BASE_URL=http://localhost:8200
 Environment=ET_DATABASE_PATH=/opt/et/data/database.db

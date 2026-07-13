@@ -174,7 +174,7 @@ lib/ai/
 
 ```typescript
 // OpenAI-compatible client
-// Sends messages to Gemma via Ollama's /v1/chat/completions
+// Sends messages to Gemma via LM Studio's /v1/chat/completions
 // Supports structured JSON output via response_format
 
 interface ChatMessage {
@@ -205,7 +205,7 @@ async function synthesize(text: string): Promise<ArrayBuffer>
 
 ### Environment-based Configuration
 
-All URLs come from env vars set in Phase 0. This means the same code works on MacBook (pointing to local Ollama) and on the LXC (pointing to GPU-accelerated services).
+All URLs come from env vars set in Phase 0. This means the same code works on MacBook (pointing to local LM Studio) and on the LXC (pointing to GPU-accelerated LM Studio headless).
 
 ---
 
